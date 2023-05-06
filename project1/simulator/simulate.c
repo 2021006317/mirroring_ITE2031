@@ -19,8 +19,8 @@ void printState(stateType *);
 int convertNum(int num);
 
 void parse(stateType *, int *, int *, int *, int *);
-void testReg(int *);
-void testOffset(int *);
+void testReg(int);
+void testOffset(int);
 
 int main(int argc, char *argv[])
 {
@@ -175,14 +175,14 @@ void parse(stateType *statePtr, int *opcode, int *arg0, int *arg1, int *arg2){
     *arg2 = currentMemory & 0xffff;
 }
 
-void testReg(int *regNum){
+void testReg(int regNum){
 	if (regNum < 0 || regNum > 7){
 		printf("error: Register outside the range [0,7], input regNum is %d\n", regNum);
 		exit(1);
 	}
 }
 
-void testOffset(int *offset){
+void testOffset(int offset){
     if (offset > 32767 || offset < -32768){
         printf("error: offsetFields that don't fit in 16 bits\n");
         exit(1);
