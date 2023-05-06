@@ -14,7 +14,7 @@ int treatFill(char *);
 
 void testReg(char *);
 
-typedef struct LABEL {
+typedef struct labelStruct {
 	char name;
 	int address;
 	char value; // .fill
@@ -35,9 +35,9 @@ int main(int argc, char *argv[])
 				argv[0]);
 		exit(1);
 	}
-
 	inFileString = argv[1];
 	outFileString = argv[2];
+	cprintf("me\n");
 
 	inFilePtr = fopen(inFileString, "r");
 	if (inFilePtr == NULL) {
