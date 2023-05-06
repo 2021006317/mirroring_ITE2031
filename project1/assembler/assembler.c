@@ -37,7 +37,6 @@ int main(int argc, char *argv[])
 	}
 	inFileString = argv[1];
 	outFileString = argv[2];
-	cprintf("me\n");
 
 	inFilePtr = fopen(inFileString, "r");
 	if (inFilePtr == NULL) {
