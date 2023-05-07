@@ -8,6 +8,7 @@
 #define NUMREGS 8 /* number of machine registers */
 #define MAXLINELENGTH 1000
 
+//! register 초기화 해주기. 0으로.
 typedef struct stateStruct {
     int pc;
     int mem[NUMMEMORY];
@@ -52,12 +53,19 @@ int main(int argc, char *argv[])
     }
 
 	/* TODO: */
+    // register initialize to 0
+    for (int x=0;x<NUMREGS;x++){
+        state.reg[x] =0;
+    }
+
     int halted=0;
+    int instruction_cnt=0;
     while(1){
         printState(&state);
         if (halted==1) break;
         int opcode, arg0, arg1, arg2;
         parse(&state, &opcode, &arg0, &arg1, &arg2);
+        
         state.pc++;
         /* opcode : add(0), nor(1), lw(2), sw(3), beq(4), jalr(5), halt(6), noop(7) */
         /* R-type */
@@ -73,19 +81,21 @@ int main(int argc, char *argv[])
             else if (opcode==1){
                 state.reg[arg2] = ~(state.reg[arg0] || state.reg[arg1]);
             }
+            instruction_cnt++;
         }
         /* I-type */
         else if (opcode==2 || opcode==3 || opcode==4){
+            int offset = convertNum(arg2);
             testReg(arg0);
             testReg(arg1);
-            testOffset(arg2);
+            testOffset(offset);
             /* lw
                 lw regA(arg0) regB(arg1) offset(arg2)
                 Load regB from memory(offset+A).
                 Memory address is formed by adding offsetField with the contents of regA.
             */
             if (opcode==2){
-                state.reg[arg1] = state.mem[state.mem[arg0] + convertNum(arg2)];
+                state.reg[arg1] = state.mem[state.reg[arg0] + offset];
             }
             /* sw
                 sw regA(arg0) regB(arg1) offset(arg2)
@@ -93,7 +103,7 @@ int main(int argc, char *argv[])
                 Memory address is formed by adding offsetField with the contents of regA.
             */
             else if (opcode==3){
-                state.mem[state.reg[arg0]+ convertNum(arg2)] = state.reg[arg1];
+                state.mem[state.reg[arg0]+ offset] = state.reg[arg1];
             }
             /* beq
                 beq regA regB offset
@@ -103,9 +113,10 @@ int main(int argc, char *argv[])
             */
             else if (opcode==4){
                 if (state.reg[arg0]==state.reg[arg1]){
-                    state.pc += convertNum(arg2);
+                    state.pc += offset;
                 }
             }
+            instruction_cnt++;
         }
         /* J-type */
         // First, store PC+1 into regB, where PC is the address of this "jalr" instruction.
@@ -116,14 +127,17 @@ int main(int argc, char *argv[])
             testReg(arg1);
             state.reg[arg1] = state.pc;
             state.pc = state.reg[arg0];
+            instruction_cnt++;
         }
         /* O-type */
         else if (opcode==6 || opcode==7){
             if (opcode==6){ // halt
                 halted=1;
+                instruction_cnt++;
+                break;
             }
             else if (opcode==7){ // noop
-                continue;
+                instruction_cnt++;
             }
         }
         else{
@@ -131,7 +145,10 @@ int main(int argc, char *argv[])
             exit(1);
         }
     }
-
+    printf("machine halted\n");
+    printf("total of %d instructions executed\n", instruction_cnt);
+    printf("final state of machine:\n");
+    printState(&state);
     fclose(filePtr);
     exit(0);
 }
@@ -161,6 +178,7 @@ int convertNum(int num)
 	return (num);
 }
 
+//* new!
 void parse(stateType *statePtr, int *opcode, int *arg0, int *arg1, int *arg2){
     int currentMemory = statePtr->mem[statePtr->pc];
     /*
