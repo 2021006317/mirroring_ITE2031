@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 		//* duplicated label test
 		for (int k=1; k<cnt; k++){
 			if (strcmp(labels[k].name, "") && !strcmp(labels[k].name, label)){
-				printf("error: Duplicate definition of labels\n");
+				printf("personal_error: Duplicate definition of labels\n");
 				exit(1);
 			}
 		}
@@ -64,6 +64,18 @@ int main(int argc, char *argv[])
 		strcpy(labels[cnt].name, label);
 		labels[cnt].address = cnt;
 
+		//* label validation test
+		if ((strlen(label) > 6)||isNumber(&label[0])){
+			printf("personal_error-raising label: %s\n", label);
+			if (strlen(label) > 6){
+				printf("personal_error: too long label\n");
+			}
+			if (isNumber(&label[0])){
+				printf("personal_error: label cannot start with number\n");
+			}
+			exit(1);
+		}
+		
 		if (!strcmp(opcode, ".fill")){
 			// address
 			if (isNumber(arg0)){
@@ -81,23 +93,18 @@ int main(int argc, char *argv[])
 				}
 				//* undefined label test
 				if (check==0) {
-					printf("error: Use of undefined labels\n");
+					printf("personal_error: Use of undefined labels\n");
 					exit(1);
 				}
 			}
 		}
 		cnt++;
 	}
-	
-	// for (int siz=0;siz<cnt;siz++){
-	// 	printf("label[%d] : %s\n", siz, labels[siz].name);
-	// }
 
 	/* this is how to rewind the file ptr so that you start reading from the
 		 beginning of the file */
 	rewind(inFilePtr);
-	
-	// printf("\nlabeling done\n\n");
+
 	//* TODO: Phase-2 generate machine codes to outfile */
 	int pc = 0;
 	while(readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)){
@@ -171,7 +178,7 @@ int main(int argc, char *argv[])
 			res = treatFill(arg0);
 		}
 		else { //* invalid instruction test
-			printf("error: Unrecognized opcodes\n");
+			printf("personal_error: Unrecognized opcodes\n");
 			exit(1);
 		}
 
@@ -256,7 +263,7 @@ int treatFill(char *arg0){
 			}
 		}
 		if (check==0) {
-			printf("error: Use of undefined labels\n");
+			printf("personal_error: Use of undefined labels\n");
 			exit(1);
 		}
 	}
@@ -269,7 +276,7 @@ int treatOffsetField(char *opcode, char *offset, int pc){
 	if (isNumber(offset)){
 		int temp = atoi(offset);
 		if (temp > 32767 || temp < -32768){
-			printf("error: offsetFields that don't fit in 16 bits\n");
+			printf("personal_error: offsetFields that don't fit in 16 bits\n");
 			exit(1);
 		}
 		temp &= 0xFFFF;
@@ -283,7 +290,7 @@ int treatOffsetField(char *opcode, char *offset, int pc){
 				if (!strcmp(opcode, "beq")){res = temp - pc - 1;}
 				else res = temp;
 	  			if (res > 32767 || res < -32768){
-					printf("error: offsetFields that don't fit in 16 bits\n");
+					printf("personal_error: offsetFields that don't fit in 16 bits\n");
 					exit(1);
 				}
 				res &= 0xffff;
@@ -292,7 +299,7 @@ int treatOffsetField(char *opcode, char *offset, int pc){
 			}
 		}
 		if (check == 0){
-			printf("error: Use of undefined labels\n");
+			printf("personal_error: Use of undefined labels\n");
 			exit(1);
 		}
 	}
@@ -302,12 +309,12 @@ int treatOffsetField(char *opcode, char *offset, int pc){
 void testReg(char *reg){
 	if(!isNumber(reg)){
 		printf("reg: %s\n", reg);
-		printf("error: Non-integer register arguments\n");
+		printf("personal_error: Non-integer register arguments\n");
 		exit(1);
 	}
 	int regNum = atoi(reg);
 	if (regNum < 0 || regNum > 7){
-		printf("error: Register outside the range [0,7], input regNum is %d\n", regNum);
+		printf("personal_error: Register outside the range [0,7], input regNum is %d\n", regNum);
 		exit(1);
 	}
 }

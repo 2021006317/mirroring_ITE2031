@@ -1,0 +1,11 @@
+test1   lw  0   1   2
+test2   lw  0   2   3
+test3   lw  0   3   0
+test4   lw  0   4   -1
+test5   nor 5   1   2
+test6   nor 6   3   4
+test7   nor 7   1   3
+jump    jalr    4   5
+jump2   jalr    7   7
+test8   add     1   2   3
+test9   sw  3   3   0
