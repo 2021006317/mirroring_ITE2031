@@ -9,24 +9,26 @@
 int readAndParse(FILE *, char *, char *, char *, char *, char *);
 int isNumber(char *);
 
-int treatOffsetField(char *);
+int treatOffsetField(char *, char *, int pc);
 int treatFill(char *);
 
 void testReg(char *);
 
 typedef struct labelStruct {
-	char name;
+	char name[7];
 	int address;
-	char value; // .fill
+	int value; // .fill
 } LABEL;
 
-LABEL labels[MAXLINELENGTH]={0,};
+LABEL labels[MAXLINELENGTH];
+
 int cnt=0; // line cnt or label cnt
 
 int main(int argc, char *argv[]) 
 {
 	char *inFileString, *outFileString;
 	FILE *inFilePtr, *outFilePtr;
+
 	char label[MAXLINELENGTH], opcode[MAXLINELENGTH], arg0[MAXLINELENGTH], 
 			 arg1[MAXLINELENGTH], arg2[MAXLINELENGTH];
 	
@@ -49,20 +51,20 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	/* TODO: Phase-1 label calculation */
+	//* TODO: Phase-1 label calculation */
 	while(readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)){
 		//* duplicated label test
-		for (int k=0; k<cnt;k++){
-			if (labels[k].name == label){
+		for (int k=1; k<cnt; k++){
+			if (strcmp(labels[k].name, "") && !strcmp(labels[k].name, label)){
 				printf("error: Duplicate definition of labels\n");
 				exit(1);
 			}
 		}
 		// labeling
-		labels[cnt].name = label;
+		strcpy(labels[cnt].name, label);
 		labels[cnt].address = cnt;
 
-		if (opcode == ".fill"){
+		if (!strcmp(opcode, ".fill")){
 			// address
 			if (isNumber(arg0)){
 				labels[cnt].value = atoi(arg0);
@@ -84,13 +86,20 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+		cnt++;
 	}
 	
+	// for (int siz=0;siz<cnt;siz++){
+	// 	printf("label[%d] : %s\n", siz, labels[siz].name);
+	// }
+
 	/* this is how to rewind the file ptr so that you start reading from the
 		 beginning of the file */
 	rewind(inFilePtr);
-
-	/* TODO: Phase-2 generate machine codes to outfile */
+	
+	// printf("\nlabeling done\n\n");
+	//* TODO: Phase-2 generate machine codes to outfile */
+	int pc = 0;
 	while(readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)){
 		int res = 0;
 		
@@ -102,13 +111,13 @@ int main(int argc, char *argv[])
 			bit 15-3  : unused(0)
 			bit 2-0   : destReg
 		*/
-		if (opcode == "add" || opcode == "nor"){
+		if (!strcmp(opcode, "add") || !strcmp(opcode, "nor")){
 			testReg(arg0);
 			testReg(arg1);
 			testReg(arg2);
 			// opcode
-			if (opcode == "add") 		{ res = 0 << 22; }
-			else if (opcode == "nor")	{ res = 1 << 22; }
+			if (!strcmp(opcode, "add")) 		{ res = 0 << 22; }
+			else if (!strcmp(opcode, "nor"))	{ res = 1 << 22; }
 			res |= atoi(arg0) << 19; // regA
 			res |= atoi(arg1) << 16; // regB
 			res |= atoi(arg2); 		 // destReg
@@ -120,17 +129,16 @@ int main(int argc, char *argv[])
 			bit 18-16 : regB
 			bit 15-0  : offsetField
 		*/
-		else if (opcode == "lw" || opcode == "sw" || opcode == "beq"){
+		else if (!strcmp(opcode, "lw") || !strcmp(opcode, "sw") || !strcmp(opcode, "beq")){
 			testReg(arg0);
 			testReg(arg1);
-			testReg(arg2);
 			// opcode
-			if (opcode == "lw") 		{ res = 2 << 22; }
-			else if (opcode == "nor")	{ res = 3 << 22; }
-			else if (opcode == "beq")	{ res = 4 << 22; }
+			if (!strcmp(opcode, "lw")) 		{ res = 2 << 22; }
+			else if (!strcmp(opcode, "sw"))	{ res = 3 << 22; }
+			else if (!strcmp(opcode, "beq"))	{ res = 4 << 22; }
 			res |= atoi(arg0) << 19; // regA
 			res |= atoi(arg1) << 16; // regB
-			res |= treatOffsetField(arg2); // offsetField
+			res |= treatOffsetField(opcode, arg2, pc); // offsetField
 		}
 		/* J-type
 			bit 31-25 : unused(0)
@@ -139,7 +147,7 @@ int main(int argc, char *argv[])
 			bit 18-16 : regB
 			bit 15-0  : unused(0)
 		*/
-		else if (opcode == "jalr"){
+		else if (!strcmp(opcode, "jalr")){
 			res = 5 << 22 ;
 			testReg(arg0);
 			testReg(arg1);
@@ -151,22 +159,24 @@ int main(int argc, char *argv[])
 			bit 24-22 : opcode
 			bit 21-0  : unused(0)
 		*/
-		else if (opcode == "halt" || opcode == "noop"){
-			if (opcode == "halt") 		{ res = 6 << 22; }
-			else if (opcode == "noop")	{ res = 7 << 22; }
+		else if (!strcmp(opcode, "halt") || !strcmp(opcode, "noop")){
+			if (!strcmp(opcode, "halt")) 		{ res = 6 << 22; }
+			else if (!strcmp(opcode, "noop"))	{ res = 7 << 22; }
 		}
 		/* .fill
 			number : address
 			label : label address
 		*/
-		else if (opcode == ".fill"){
-			testReg(arg0);
+		else if (!strcmp(opcode, ".fill")){
 			res = treatFill(arg0);
 		}
 		else { //* invalid instruction test
 			printf("error: Unrecognized opcodes\n");
 			exit(1);
 		}
+
+		fprintf(outFilePtr, "%d\n", res);
+		pc++;
 	}
 
 	if (inFilePtr) 	{close(inFilePtr);	}
@@ -233,13 +243,13 @@ int isNumber(char *string)
 //* .fill + 숫자 : 그대로, + 라벨 : 라벨의 주소
 int treatFill(char *arg0){
 	int res=0;
-	if (isNumber(arg0)){
+	if (isNumber(arg0)){ // number
 		res = atoi(arg0);
 	}
-	else{
+	else{ // label
 		int check=0;
-		for (int i=0;i<cnt;i++){
-			if (labels[i].name == arg0){
+		for (int i=0; i<cnt; i++){
+			if (!strcmp(labels[i].name, arg0)){
 				res = labels[i].address;
 				check=1;
 				break;
@@ -254,23 +264,30 @@ int treatFill(char *arg0){
 }
 
 // 16bit 니까 int.
-int treatOffsetField(char *offset){
-	int res=0;
+int treatOffsetField(char *opcode, char *offset, int pc){
+	int res = 0;
 	if (isNumber(offset)){
-		long test = 0;
-		test = atol(offset);
-		if (test > 32767 || test < -32768){
+		int temp = atoi(offset);
+		if (temp > 32767 || temp < -32768){
 			printf("error: offsetFields that don't fit in 16 bits\n");
 			exit(1);
 		}
-		res = atoi(offset);
+		temp &= 0xFFFF;
+		res = temp;
 	}
 	else { //label
 		int check=0;
 		for (int i=0; i<MAXLINELENGTH; i++){
-			if (labels[i].name == offset){
-				res = labels[i].value;
-				check=1;
+			if (!strcmp(labels[i].name, offset)){
+				int temp = labels[i].address;
+				if (!strcmp(opcode, "beq")){res = temp - pc - 1;}
+				else res = temp;
+	  			if (res > 32767 || res < -32768){
+					printf("error: offsetFields that don't fit in 16 bits\n");
+					exit(1);
+				}
+				res &= 0xffff;
+				check = 1;
 				break;
 			}
 		}
@@ -284,6 +301,7 @@ int treatOffsetField(char *offset){
 
 void testReg(char *reg){
 	if(!isNumber(reg)){
+		printf("reg: %s\n", reg);
 		printf("error: Non-integer register arguments\n");
 		exit(1);
 	}
