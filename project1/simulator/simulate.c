@@ -8,7 +8,6 @@
 #define NUMREGS 8 /* number of machine registers */
 #define MAXLINELENGTH 1000
 
-//! register 초기화 해주기. 0으로.
 typedef struct stateStruct {
     int pc;
     int mem[NUMMEMORY];
